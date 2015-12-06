@@ -3,12 +3,18 @@
 import socket 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
 host = socket.gethostname() 
-port = 12345 
+port = 12345
 s.connect((host, port))
-user_input = raw_input()
-s.send(user_input)
+while True:
+	
+	user_input = raw_input()
+	s.send(user_input)
 
-print s.recv(1024)
+	data_recv = s.recv(1024)
+	print data_recv
+	if(data_recv[0:3] == "BYE"):
+		s.close()
+		break
 
-s.close()
+
 
