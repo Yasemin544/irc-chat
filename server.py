@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import socket 
-
+user_list = []
 def parser(csocket, data):
 	data = data.strip()
 
@@ -25,10 +25,14 @@ def parser(csocket, data):
 		response = "SOK"
 
 	elif data[0:3] == "USR":
-		response = "HEL"
+		if data[4:] not in user_list:
+			user_list.append(data[4:])
+			response = "HEL " + data[4:]
+		else:
+			response = "REJ"
 
 	elif data[0:3] == "LSQ":
-		response = "LSA"
+		response = "LSA " + ":".join(user_list)
 	
 	elif data[0:3] == "MSG":
 		response = "MOK"
