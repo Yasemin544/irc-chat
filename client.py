@@ -29,7 +29,8 @@ class ReadThread (threading.Thread):
 			user_input = raw_input()
 			s.send(user_input)
 			data = self.csoc.recv(1024)
-			incoming_parser(self, data)
+
+			self.incoming_parser(data)
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
 host = socket.gethostname() 
