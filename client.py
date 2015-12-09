@@ -16,21 +16,31 @@ class ReadThread (threading.Thread):
 		self.screenQueue = screenQueue
 
 	def incoming_parser(self, data):
-		#print data_recv
 		if(data[0:3] == "TOC"):
-			print "tic*toc"			
-			#s.close()
-			#break
-		else:
-			print "ERR"
+			print "tic*toc"	
+		
+		elif(data[0:3] == "BYE"):
+			self.csoc.close()
+			return "CLS" #close socket signal		
 
 	def run(self):
-		while True:
+		while True: #for user login
 			user_input = raw_input()
 			s.send(user_input)
 			data = self.csoc.recv(1024)
+			print data
+			if(data[0:3] == "HEL"):
+				break
+			
+		while True: ##for default client commands
+			user_input = raw_input()
+			s.send(user_input)
+			data = self.csoc.recv(1024)
+			print data
+			result = self.incoming_parser(data)
+			if(result == "CLS"): #close socket signal
+				break
 
-			self.incoming_parser(data)
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
 host = socket.gethostname() 

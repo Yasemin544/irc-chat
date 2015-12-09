@@ -9,12 +9,24 @@ import time
 
 user_list = []
 
+def acceptUser(data): #user accepted to server for the first time(user login)
+	if data[0:3] == "USR":
+			if data[4:] not in user_list:
+				user_list.append(data[4:])
+				response = "HEL " + data[4:] #user nickname accepted
+				 
+			else:
+				response = "REJ" #nickname exists
+	else:
+		response = "ERU" #wrong user login command
+	return response
+
+
 class ReadThread (threading.Thread):
 	def __init__(self, name, csoc, threadQueue, screenQueue):
 		threading.Thread.__init__(self)
 		self.name = name
 		self.csoc = csoc
-		self.nickname = ""
 		self.threadQueue = threadQueue
 		self.screenQueue = screenQueue
 
@@ -23,7 +35,7 @@ class ReadThread (threading.Thread):
 		data = data.strip()
 
 		if len(data) == 0:
-			return 1
+			return
 
 		elif len(data) < 3:
 			response = 'ER3'
@@ -35,17 +47,20 @@ class ReadThread (threading.Thread):
 			response = 'TOC'		
 		
 		elif data[0:3] == "QUI":
-			response = "BYE" 
+			response = "BYE " + self.name
 			self.csoc.send(response)
-			return 0
+			user_list.remove(self.name)
+			return
 
 		elif data[0:3] == "SAY":
 			response = "SOK"
 
-		elif data[0:3] == "USR":
+		elif data[0:3] == "USR": #user changes nickname
 			if data[4:] not in user_list:
+				user_list.remove(self.name)
 				user_list.append(data[4:])
 				response = "HEL " + data[4:]
+				 
 			else:
 				response = "REJ"
 
@@ -59,13 +74,24 @@ class ReadThread (threading.Thread):
 			response = "ERR"
 		
 		self.csoc.send(response)
-		return 1
+		return 
+
 	def run(self):
-		while True:
+		while True: #for user login
 			data = self.csoc.recv(1024)
-			
+			result = acceptUser(data)
+			if(result[0:3] == "HEL"):
+				self.csoc.send(result)
+				self.name = data[4:]#user accepted
+				break
+			elif(result[0:3] == "ERU"):
+				self.csoc.send("ERU")
+				
+		while True: #for default client commands
+			data = self.csoc.recv(1024)
 			self.outgoing_parser(data) 
 			
+
 
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -91,6 +117,7 @@ for tName in threadList:
 	s.listen(5)
 	c, addr = s.accept()
 	print 'Got connection from', addr
+
 	thread = ReadThread(threadID, c, sendQueue, screenQueue)
 	thread.start()
 	threads.append(thread)
