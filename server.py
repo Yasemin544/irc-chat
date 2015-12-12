@@ -18,19 +18,18 @@ def acceptUser(data): #user accepted to server for the first time(user login)
 			else:
 				response = "REJ" #nickname exists
 	else:
-		response = "ERU" #wrong user login command
+		response = "ERL" #wrong user login command
 	return response
 
 
 class ReadThread (threading.Thread):
-	def __init__(self, name, csoc, threadQueue, screenQueue):
+	def __init__(self, readThreadID, csoc):
 		threading.Thread.__init__(self)
-		self.name = name
+		self.readThreadID = readThreadID
 		self.csoc = csoc
-		self.threadQueue = threadQueue
-		self.screenQueue = screenQueue
+		self.nickname = ""
 
-	def outgoing_parser(self, data):
+	def incoming_parser(self, data):
 		
 		data = data.strip()
 
@@ -47,9 +46,10 @@ class ReadThread (threading.Thread):
 			response = 'TOC'		
 		
 		elif data[0:3] == "QUI":
-			response = "BYE " + self.name
+			response = "BYE " + self.nickname
 			self.csoc.send(response)
-			user_list.remove(self.name)
+			user_list.remove(self.nickname)
+			threadList.remove(self.readThreadID)
 			return
 
 		elif data[0:3] == "SAY":
@@ -57,9 +57,11 @@ class ReadThread (threading.Thread):
 
 		elif data[0:3] == "USR": #user changes nickname
 			if data[4:] not in user_list:
-				user_list.remove(self.name)
-				user_list.append(data[4:])
-				response = "HEL " + data[4:]
+				user_list.remove(self.nickname)
+				newNick = data[4:]
+				user_list.append(newNick)
+				response = "HEL " + newNick
+				self.nickname = newNick
 				 
 			else:
 				response = "REJ"
@@ -82,14 +84,16 @@ class ReadThread (threading.Thread):
 			result = acceptUser(data)
 			if(result[0:3] == "HEL"):
 				self.csoc.send(result)
-				self.name = data[4:]#user accepted
+				self.nickname = data[4:]#user accepted
 				break
-			elif(result[0:3] == "ERU"):
-				self.csoc.send("ERU")
+			elif(result[0:3] == "REJ"):
+				self.csoc.send("REJ")
+			elif(result[0:3] == "ERL"):
+				self.csoc.send("ERL")
 				
 		while True: #for default client commands
 			data = self.csoc.recv(1024)
-			self.outgoing_parser(data) 
+			self.incoming_parser(data) 
 			
 
 
@@ -100,33 +104,16 @@ host = socket.gethostname()
 port = 12345
 s.bind((host,port))
 
-threadID = 1;
-
-threadList = ["Thread-1", "Thread-2", "Thread-3"]
-nameList = ["One", "Two", "Three", "Four", "Five"]
-queueLock = threading.Lock()
-sendQueue = Queue.Queue(10);
-screenQueue = Queue.Queue(10);
-workQueue = Queue.Queue(10)
-
-rt = ReadThread(threadID, s, sendQueue, screenQueue)
-threads = []
-threadID = 1
-# Create new threads
-for tName in threadList:
+readThreadID = 1;
+threadList = []
+while True:
 	s.listen(5)
 	c, addr = s.accept()
 	print 'Got connection from', addr
-
-	thread = ReadThread(threadID, c, sendQueue, screenQueue)
+	thread = ReadThread(readThreadID, c)s
 	thread.start()
-	threads.append(thread)
-	threadID += 1
-# Fill the queue
-	queueLock.acquire()
-	for word in nameList:
-		workQueue.put(word)
-	queueLock.release()
+	threadList.append(readThreadID)
+	readThreadID += 1
 
 
 
