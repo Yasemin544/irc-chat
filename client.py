@@ -20,34 +20,76 @@ class ReadThread (threading.Thread):
 		self.screenQueue = screenQueue
 		
 	def incoming_parser(self, data):
+
 		if(data[0:3] == "TOC"):
-			print "tic*toc"	
+			result = "Connected to server"	
 		
+		elif(data[0:3] == "ERL"):
+			result = "Please login with /nick command."
+
 		elif(data[0:3] == "BYE"):
-			self.csoc.close()
-			return "CLS" #close socket signal
+			result = "CLS" #close socket signal
+			return result
 
 		elif(data[0:3] == "HEL"):
 			nickname = data[4:]
+			result = "New nickname: " + str(nickname)
+
+		elif(data[0:3] == "REJ"):
+			result = "Nickname already exists."
+		
+		elif(data[0:3] == "MOK"):
+			result = "Message sent to user."
+
+		elif(data[0:3] == "MNO"):
+			result = "User not found."			
+
+		elif(data[0:3] == "SOK"):
+			result = "Message sent to all users"
+
+		elif(data[0:3] == "LSA"):
+			result = "Users in the channel: " + str(data[4:])
+		
+		elif(data[0:3] == "ERR"):
+			result = "Wrong command"
+
+		elif(data[0:3] == "SYS"):
+			self.sendQueue.put("YOK")
+			result = data[4:]
+		
+		else:
+			result = data
+		
+		return result
 
 	def run(self):
-		while True: #for user login
-			user_input = raw_input()
-			s.send(user_input)
-			data = self.csoc.recv(1024)
-			print data
-			if(data[0:3] == "HEL"):
-				nickname = data[4:]
-				break
-			
 		while True: #for default client commands
-			user_input = raw_input()
-			s.send(user_input)
 			data = self.csoc.recv(1024)
-			print data
 			result = self.incoming_parser(data)
-			if(result[0:3] == "CLS"): #close socket signal
-				break
+			print result
+			if len(result) > 3 :
+				if(result[0:3] == "CLS"): #close socket signal
+					self.screenQueue.put("Thank you for connecting!")					
+					self.csoc.close()
+					quit()
+					break
+			self.screenQueue.put(result)			
+
+class WriteThread (threading.Thread):
+	def __init__(self, name, csoc, threadQueue):
+		threading.Thread.__init__(self)
+		self.name = name
+		self.csoc = csoc
+		self.threadQueue = threadQueue
+	def run(self):
+		while True:
+			if not (self.threadQueue).empty():
+				queue_message = self.threadQueue.get()
+				try:
+					self.csoc.send(queue_message)
+				except socket.error:
+					self.csoc.close()
+					break
 
 
 class ClientDialog(QDialog):
@@ -80,14 +122,15 @@ class ClientDialog(QDialog):
 		self.setLayout(self.vbox)# Use the vertical layout for the current window
 
 	def cprint(self, data):
-		data = nickname + ": " + data
+		data = str(nickname) + ": " + str(data)
 		self.channel.append(data)
+		self.channel.append(screenQueue.get())
 
 	def updateChannelWindow(self):
 		if not (self.screenQueue).empty():		
 			queue_message = self.screenQueue.get()
-
 			self.channel.append(queue_message)
+
 	def outgoing_parser(self):
 		senderText = self.sender.text()
 		data = str(senderText)
@@ -97,9 +140,8 @@ class ClientDialog(QDialog):
 			cmdWithParam = data.split()
 			command = cmdWithParam[0][1:]
 			parameters = cmdWithParam[1:]
-			
 			if command == "list":
-				self.threadQueue.put("LSA")
+				self.threadQueue.put("LSQ")
 				self.cprint(data)
 
 			elif command == "quit":
@@ -107,12 +149,15 @@ class ClientDialog(QDialog):
 				self.cprint(data)
 
 			elif command == "nick":
-				self.threadQueue.put("USR " + str(parameters))
+				self.threadQueue.put("USR " + str(parameters[0]))
 				self.cprint(data)
 
 			elif command == "msg":
 				self.threadQueue.put("MSG " + str(parameters))
 				self.cprint(data)
+
+			elif command == "tic":
+				self.threadQueue.put("TIC")
 
 			else:
 				self.cprint("Local: Command Error.")
@@ -127,10 +172,12 @@ class ClientDialog(QDialog):
 		self.show()
 		self.qt_app.exec_()
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
-host = socket.gethostname() 
 
-port = 12346
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
+host = "178.233.19.205"  
+#host = socket.gethostname()
+port = 12345
 s.connect((host, port))
 
 
@@ -139,18 +186,14 @@ screenQueue = Queue.Queue(100)
 app = ClientDialog(sendQueue, screenQueue)
 # start threads
 rt = ReadThread("ReadThread", s, sendQueue, screenQueue)
-#rt = ReadThread("ReadThread", s)
 rt.start()
-#wt = WriteThread("WriteThread", s, sendQueue)
-#wt.start()
+wt = WriteThread("WriteThread", s, sendQueue)
+wt.start()
 app.run()
 rt.join()
 wt.join()
 s.close()
 
-#rt.start()
-#rt.join()
-#s.close()
 
 
 
