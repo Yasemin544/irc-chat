@@ -57,7 +57,8 @@ class ReadThread (threading.Thread):
 
 		elif data[0:3] == "USR": #user changes nickname
 			if data[4:] not in user_list:
-				user_list.remove(self.nickname)
+				if(self.nickname in user_list):
+					user_list.remove(self.nickname)
 				newNick = data[4:]
 				user_list.append(newNick)
 				response = "HEL " + newNick
@@ -75,24 +76,15 @@ class ReadThread (threading.Thread):
 		else:
 			response = "ERR"
 		
+		print "response: "
+		print response
 		self.csoc.send(response)
 		return 
 
 	def run(self):
-		while True: #for user login
-			data = self.csoc.recv(1024)
-			result = acceptUser(data)
-			if(result[0:3] == "HEL"):
-				self.csoc.send(result)
-				self.nickname = data[4:]#user accepted
-				break
-			elif(result[0:3] == "REJ"):
-				self.csoc.send("REJ")
-			elif(result[0:3] == "ERL"):
-				self.csoc.send("ERL")
-				
 		while True: #for default client commands
 			data = self.csoc.recv(1024)
+			print data
 			self.incoming_parser(data) 
 			
 
@@ -101,7 +93,7 @@ class ReadThread (threading.Thread):
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 host = socket.gethostname()
 
-port = 12346
+port = 12345
 s.bind((host,port))
 
 readThreadID = 1;
