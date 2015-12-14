@@ -21,6 +21,10 @@ class ReadThread (threading.Thread):
 		
 	def incoming_parser(self, data):
 
+		if(data[0:3] == "TIC"):
+			print "TIC"
+			result = "TIC"	
+
 		if(data[0:3] == "TOC"):
 			result = "Connected to server"	
 		
@@ -39,22 +43,27 @@ class ReadThread (threading.Thread):
 			result = "Nickname already exists."
 		
 		elif(data[0:3] == "MOK"):
-			result = "Message sent to user."
+			print "Message sent to user."
+			result = "MOK"
 
 		elif(data[0:3] == "MNO"):
 			result = "User not found."			
 
 		elif(data[0:3] == "SOK"):
-			result = "Message sent to all users"
+			print "Message sent to all users"
+			result = "SOK"
 
 		elif(data[0:3] == "LSA"):
 			result = "Users in the channel: " + str(data[4:])
 		
 		elif(data[0:3] == "ERR"):
-			result = "Wrong command"
+			result = "Incorrect command sent to server"
 
 		elif(data[0:3] == "SYS"):
-			self.sendQueue.put("YOK")
+			#self.sendQueue.put("YOK")
+			result = data[4:]
+
+		elif(data[0:3] == "SAY"):
 			result = data[4:]
 		
 		else:
@@ -65,15 +74,17 @@ class ReadThread (threading.Thread):
 	def run(self):
 		while True: #for default client commands
 			data = self.csoc.recv(1024)
-			result = self.incoming_parser(data)
-			print result
-			if len(result) > 3 :
-				if(result[0:3] == "CLS"): #close socket signal
+			res = self.incoming_parser(data)
+			print res
+			if len(res) > 3 :
+				if(res[0:3] == "CLS"): #close socket signal
 					self.screenQueue.put("Thank you for connecting!")					
 					self.csoc.close()
 					quit()
 					break
-			self.screenQueue.put(result)			
+			if(res in ["TIC","MOK","SOK"]):
+				continue
+			self.screenQueue.put(res)			
 
 class WriteThread (threading.Thread):
 	def __init__(self, name, csoc, threadQueue):
@@ -122,8 +133,6 @@ class ClientDialog(QDialog):
 		self.setLayout(self.vbox)# Use the vertical layout for the current window
 
 	def cprint(self, data):
-		data = str(nickname) + ": " + str(data)
-		self.channel.append(data)
 		self.channel.append(screenQueue.get())
 
 	def updateChannelWindow(self):
@@ -153,7 +162,11 @@ class ClientDialog(QDialog):
 				self.cprint(data)
 
 			elif command == "msg":
-				self.threadQueue.put("MSG " + str(parameters))
+				msg = cmdWithParam[1:]
+				msg = " ".join(msg)
+				msg = msg.replace(" ", ":", 1)
+				self.threadQueue.put("MSG " + msg)
+				print "MSG " + msg
 				self.cprint(data)
 
 			elif command == "tic":
@@ -193,9 +206,6 @@ app.run()
 rt.join()
 wt.join()
 s.close()
-
-
-
 
 
 
