@@ -1,8 +1,8 @@
-Yasemin Alpay
+**Yasemin Alpay
 BOUN SWE544 - Internet Programming Project
-IRC-like Chat / Client Side
+IRC-like Chat / Client Side**
 
-----------------------------------------------
+---------------------------------------------------------------------------------------------------
 2 main threads needed to for the Client-Side of the program:
 These threads are ReadThread and WriteThread and they are started immediately
 when the program starts. They are inherited from the "threading.Thread".
@@ -31,21 +31,25 @@ ClientDialog. If user directly types and enters to send the text, this string is
 to a signal that means the text will be sent to all users in the channel. (SAY signal)
 In other cases, the string can mean different things, and they are parsed by given protocols.
 
-**Queues**
+**QUEUES**
 All the signals that is written to and read from sockets are first put and get to a
-sendQueue. At the meantime, all the strings that are going to be written and read from 
+sendQueue. At the meantime, all the strings that are going to be written and read from client dialog screen are again put and get to a screenQueue.
 client dialog screen are again put and get to a screenQueue.
-----------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------
 **BUGS**
 
--The private message doesn't work quite well.
+-The private message doesn't work quite well
+
 -/quit action can be improved.
+
 -There is no user list on the right side of the client dialog.
 
 
 -------------------------------------------------------
-**REPORTS on SERVER**
+**REPORTS ON SERVER**
+
 -The server that is used for tests does not support Turkish unicode characters.
+
 -Server sends TIC signal periodically. If it collapses with the SAY signal, it sends them both.
 
 
