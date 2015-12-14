@@ -34,7 +34,7 @@ In other cases, the string can mean different things, and they are parsed by giv
 **QUEUES**
 All the signals that is written to and read from sockets are first put and get to a
 sendQueue. At the meantime, all the strings that are going to be written and read from client dialog screen are again put and get to a screenQueue.
-client dialog screen are again put and get to a screenQueue.
+
 --------------------------------------------------------------------------------------------------------------------
 **BUGS**
 
